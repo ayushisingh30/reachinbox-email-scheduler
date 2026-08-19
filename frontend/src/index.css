@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-bgDarker text-slate-200 font-sans antialiased overflow-x-hidden;
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 40%);
+    background-attachment: fixed;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-bgDarker;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-800 rounded-full transition-colors hover:bg-slate-700;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(15, 15, 22, 0.65);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-input {
+  background: rgba(5, 5, 10, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  @apply transition-all duration-200 focus:outline-none focus:border-accent-violet focus:ring-1 focus:ring-accent-violet/30;
+}
+
+.glass-button-primary {
+  @apply bg-gradient-to-r from-accent-violet to-accent-purple text-white font-medium px-4 py-2 rounded-lg hover:shadow-[0_0_15px_rgba(139,92,246,0.4)] hover:brightness-110 active:scale-95 transition-all duration-200;
+}
+
+.glass-button-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  @apply text-slate-300 font-medium px-4 py-2 rounded-lg hover:bg-white/10 active:scale-95 transition-all duration-200;
+}
+
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400;
+}
+
+.gradient-accent-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-accent-violet via-accent-blue to-accent-purple;
+}
