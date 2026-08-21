@@ -63,7 +63,7 @@ const config = {
     secret: str('SESSION_SECRET'),
     cookieName: str('SESSION_COOKIE_NAME', 'reachinbox_session'),
     ttlDays: int('SESSION_TTL_DAYS', 7),
-    // Cross-site cookies (Vercel frontend -> Render backend) require
+    // Cross-site cookies (frontend and API on different hosts) require
     // SameSite=None, which browsers only accept together with Secure.
     sameSite: str('SESSION_COOKIE_SAMESITE', isProduction ? 'none' : 'lax'),
     secure: bool('SESSION_COOKIE_SECURE', isProduction),
@@ -110,6 +110,10 @@ const config = {
     maxHourlyLimit: int('MAX_HOURLY_LIMIT', 10000),
     maxDelayBetweenEmailsMs: int('MAX_DELAY_BETWEEN_EMAILS_MS', 3600000),
   },
+
+  // Run the BullMQ worker inside the API process. Off by default; see the
+  // note in server.js for when a single-process deployment makes sense.
+  runWorkerInApi: bool('RUN_WORKER_IN_API', false),
 
   logLevel: str('LOG_LEVEL', 'info'),
 };

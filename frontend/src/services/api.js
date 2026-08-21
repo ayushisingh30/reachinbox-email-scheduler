@@ -1,6 +1,22 @@
 import axios from 'axios';
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+/**
+ * Where the API lives.
+ *
+ * VITE_API_URL wins when set. Otherwise: during local development the API is a
+ * separate process on port 5000, while a deployed build assumes the API is
+ * served from the same origin under /api. Same-origin is the better shape -
+ * no CORS preflight, and the session cookie stays first-party.
+ */
+function resolveApiUrl() {
+  const configured = import.meta.env.VITE_API_URL;
+  if (configured) return configured.replace(/\/+$/, '');
+
+  const isLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+  return isLocalhost ? 'http://localhost:5000/api' : '/api';
+}
+
+const API_URL = resolveApiUrl();
 
 /**
  * `withCredentials` is what carries the httpOnly session cookie. The token is

@@ -2,7 +2,7 @@
 
 const { prisma } = require('../db/prisma');
 const { config } = require('../config');
-const { enqueueEmailJobs, removeEmailJob, buildJobId } = require('../queues/emailQueue');
+const { enqueueEmailJobs, removeEmailJob } = require('../queues/emailQueue');
 const { notFound, forbidden, badRequest } = require('../utils/errors');
 const { logger } = require('../utils/logger');
 
@@ -162,18 +162,10 @@ async function reconcileScheduledJobs() {
     await enqueueEmailJobs(entries.slice(i, i + 500), now);
   }
 
-  // Keep the stored queue id aligned with what was just written.
-  await Promise.all(
-    pending.map((job) =>
-      prisma.emailJob
-        .update({
-          where: { id: job.id },
-          data: { bullJobId: buildJobId(job.id, job.scheduledAt), status: 'SCHEDULED' },
-        })
-        .catch(() => {})
-    )
-  );
-
+  // No per-row write here on purpose. `bullJobId` is a pure function of
+  // (id, scheduledAt) and is already stored whenever either is set, so writing
+  // it back would be a no-op costing one round trip per email - which on a
+  // 1000+ email backlog exhausts the connection pool before it finishes.
   log.info('Reconciliation complete', { released: released.count, requeued: entries.length });
   return { released: released.count, requeued: entries.length };
 }

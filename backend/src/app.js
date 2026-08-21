@@ -16,8 +16,8 @@ const log = logger.child('http');
 function createApp() {
   const app = express();
 
-  // Behind Render/Vercel/Nginx the client IP and protocol come from headers;
-  // without this, rate limiting and Secure cookies misbehave.
+  // Behind a proxy or platform router the client IP and protocol arrive in
+  // headers; without this, rate limiting and Secure cookies misbehave.
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
 

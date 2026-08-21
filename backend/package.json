@@ -18,7 +18,9 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "test": "node --test",
-    "test:unit": "node --test tests/recipients.test.js tests/schedulePlanner.test.js tests/validate.test.js"
+    "test:unit": "node --test tests/recipients.test.js tests/schedulePlanner.test.js tests/validate.test.js",
+    "postinstall": "prisma generate",
+    "build": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

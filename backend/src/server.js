@@ -20,7 +20,36 @@ const { logger } = require('./utils/logger');
 const log = logger.child('server');
 
 let server = null;
+let worker = null;
 let shuttingDown = false;
+
+/**
+ * Single-process mode.
+ *
+ * Set RUN_WORKER_IN_API=true to run the BullMQ worker inside this process
+ * instead of as a separate one. This exists for hosts that only give you a
+ * single long-running service, where paying
+ * for a second process is not an option.
+ *
+ * Two processes is still the default and the better shape: the API can restart
+ * without interrupting a delivery, and each side scales on its own. Nothing
+ * about correctness changes either way - the same claim, rate limit and
+ * spacing rules apply, because they live in PostgreSQL and Redis rather than in
+ * process memory.
+ */
+async function startEmbeddedWorker() {
+  const { createEmailWorker } = require('./workers/emailWorker');
+  const { reconcileScheduledJobs } = require('./services/emailService');
+  const { verifyTransport } = require('./services/mailer');
+  const { DEFAULT_REF } = require('./services/credentials');
+
+  assertConfig('worker');
+  await verifyTransport(DEFAULT_REF);
+  await reconcileScheduledJobs();
+
+  ({ worker } = createEmailWorker());
+  log.warn('Worker is running inside the API process (RUN_WORKER_IN_API=true)');
+}
 
 async function main() {
   assertConfig('api');
@@ -35,6 +64,16 @@ async function main() {
     log.info('Redis connected');
   } catch (err) {
     log.error(`Redis is not reachable at startup: ${err.message}`);
+  }
+
+  if (config.runWorkerInApi) {
+    try {
+      await startEmbeddedWorker();
+    } catch (err) {
+      // A worker that cannot send is worth shouting about, but the API should
+      // still come up so /api/health can explain what is wrong.
+      log.error(`Embedded worker failed to start: ${err.message}`);
+    }
   }
 
   const app = createApp();
@@ -63,6 +102,7 @@ async function shutdown(signal) {
 
   try {
     if (server) await new Promise((resolve) => server.close(resolve));
+    if (worker) await worker.close();
     await closeQueue();
     await closeRedis();
     await disconnectDatabase();

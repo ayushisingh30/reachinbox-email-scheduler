@@ -5,7 +5,7 @@
  * Prints the backend health report.
  *
  *   npm run health
- *   npm run health -- https://reachinbox-api.onrender.com
+ *   npm run health -- https://your-api-host.example.com
  *
  * Exits non-zero when a dependency is down, so it works in CI or a deploy gate.
  */
