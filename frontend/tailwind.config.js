@@ -1,47 +1,44 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
       colors: {
-        bgDark: '#0A0A0C',
-        bgDarker: '#050506',
-        panelDark: 'rgba(20, 20, 25, 0.7)',
-        accent: {
-          blue: '#3B82F6',
-          purple: '#8B5CF6',
-          violet: '#6366F1',
-          success: '#10B981',
-          danger: '#EF4444',
-          warning: '#F59E0B',
+        // One restrained accent, used for primary actions and active state only.
+        brand: {
+          50: '#eef2ff',
+          100: '#e0e7ff',
+          200: '#c7d2fe',
+          300: '#a5b4fc',
+          400: '#818cf8',
+          500: '#6366f1',
+          600: '#4f46e5',
+          700: '#4338ca',
+          800: '#3730a3',
+          900: '#312e81',
         },
       },
-      fontFamily: {
-        sans: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
-      },
-      animation: {
-        'pulse-glow': 'pulseGlow 2s infinite alternate',
-        'fade-in': 'fadeIn 0.3s ease-out forwards',
-        'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+      boxShadow: {
+        // Deliberately soft: elevation is a hint, not a decoration.
+        card: '0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06)',
+        raised: '0 4px 6px -1px rgb(15 23 42 / 0.06), 0 2px 4px -2px rgb(15 23 42 / 0.06)',
+        overlay: '0 20px 40px -12px rgb(15 23 42 / 0.22)',
       },
       keyframes: {
-        pulseGlow: {
-          '0%': { boxShadow: '0 0 5px rgba(99, 102, 241, 0.2)' },
-          '100%': { boxShadow: '0 0 20px rgba(99, 102, 241, 0.6)' },
+        fadeIn: { from: { opacity: '0' }, to: { opacity: '1' } },
+        riseIn: {
+          from: { opacity: '0', transform: 'translateY(6px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
         },
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        slideUp: {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
+      },
+      animation: {
+        'fade-in': 'fadeIn 140ms ease-out',
+        'rise-in': 'riseIn 160ms ease-out',
       },
     },
   },
   plugins: [],
-}
+};

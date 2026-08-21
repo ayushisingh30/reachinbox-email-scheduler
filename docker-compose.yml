@@ -1,0 +1,49 @@
+# Local infrastructure only: PostgreSQL and Redis.
+#
+#   docker compose up -d       start
+#   docker compose logs -f     follow logs
+#   docker compose down        stop (data is kept in the named volumes)
+#   docker compose down -v     stop and delete the data
+#
+# The API, the worker and the frontend deliberately run as ordinary Node
+# processes (`npm run dev`) so that reloads are instant and logs are readable.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: reachinbox-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: reachinbox
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d reachinbox']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    # BullMQ needs 6.2+; 7 is what this project is developed against.
+    image: redis:7-alpine
+    container_name: reachinbox-redis
+    restart: unless-stopped
+    # Persist the queue so delayed jobs survive a container restart.
+    command: ['redis-server', '--appendonly', 'yes', '--appendfsync', 'everysec']
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
+  redis-data:

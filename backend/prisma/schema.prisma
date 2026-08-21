@@ -1,5 +1,9 @@
+// ReachInbox Email Job Scheduler - data model
+// PostgreSQL is the source of truth for every durable fact about a campaign.
+// Redis/BullMQ only holds the schedule (delayed jobs) and coordination counters.
+
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -7,48 +11,128 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id        Int        @id @default(autoincrement())
-  email     String     @unique
-  name      String
-  avatar    String?
-  googleId  String     @unique
-  createdAt DateTime   @default(now())
-  emails    EmailJob[]
+enum EmailStatus {
+  SCHEDULED
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+  RATE_LIMITED
 }
 
-model Sender {
-  id        Int        @id @default(autoincrement())
-  email     String     @unique
+enum CampaignStatus {
+  SCHEDULED
+  RUNNING
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  googleId  String   @unique
   name      String
-  host      String
-  port      Int
-  username  String
-  password  String
-  createdAt DateTime   @default(now())
-  emails    EmailJob[]
+  email     String   @unique
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  senders   Sender[]
+  campaigns Campaign[]
+  emailJobs EmailJob[]
+
+  @@index([email])
+}
+
+/// An addressable "from" identity. SMTP secrets are never stored here:
+/// `credentialRef` names an entry in the server-side credential registry which
+/// is populated from environment variables only.
+model Sender {
+  id            String   @id @default(uuid())
+  userId        String
+  name          String
+  email         String
+  smtpHost      String
+  smtpPort      Int
+  credentialRef String   @default("ETHEREAL_DEFAULT")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
+  emailJobs EmailJob[]
+
+  @@unique([userId, email])
+  @@index([userId, active])
+}
+
+model Campaign {
+  id                 String         @id @default(uuid())
+  userId             String
+  senderId           String
+  subject            String
+  body               String
+  startTime          DateTime
+  delayBetweenEmails Int // milliseconds between two sends for this campaign
+  hourlyLimit        Int // max sends per sender per rolling clock hour
+  status             CampaignStatus @default(SCHEDULED)
+  totalRecipients    Int            @default(0)
+
+  /// Optional client-supplied key (Idempotency-Key header). A replayed
+  /// schedule request returns the original campaign instead of creating a
+  /// second one.
+  requestKey String? @unique
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender    Sender     @relation(fields: [senderId], references: [id], onDelete: Restrict)
+  emailJobs EmailJob[]
+
+  @@index([userId, createdAt])
+  @@index([status])
 }
 
 model EmailJob {
-  id          String    @id @default(uuid())
+  id          String      @id @default(uuid())
+  campaignId  String
+  userId      String
+  senderId    String
   recipient   String
   subject     String
-  body        String    @db.Text
-  status      String    // PENDING, PROCESSING, SENT, FAILED
+  body        String
   scheduledAt DateTime
-  hourlyLimit Int?
-  processingStartedAt DateTime?
-  sentAt      DateTime?
-  error       String?   @db.Text
-  
-  senderId    Int?
-  sender      Sender?   @relation(fields: [senderId], references: [id], onDelete: SetNull)
-  
-  userId      Int
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime  @default(now())
+  status      EmailStatus @default(SCHEDULED)
 
-  @@index([status])
-  @@index([scheduledAt])
+  /// Id of the currently queued BullMQ job (`<emailJobId>-at-<scheduledAtMs>`).
+  bullJobId String?
+
+  /// Stable per-(campaign, recipient) key. The unique constraint is what makes
+  /// a replayed schedule request incapable of creating a second email.
+  idempotencyKey String @unique
+
+  attempts     Int       @default(0)
+  lockedAt     DateTime? // processing lease acquired at
+  lockedBy     String? // worker instance that holds the lease
+  sentAt       DateTime?
+  failedAt     DateTime?
+  errorMessage String?
+  previewUrl   String?
+  messageId    String?
+
+  delayBetweenEmails Int
+  hourlyLimit        Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender   Sender   @relation(fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([userId, status])
+  @@index([status, scheduledAt])
+  @@index([campaignId])
+  @@index([senderId, status])
+  @@index([userId, sentAt])
 }
